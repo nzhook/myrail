@@ -1,5 +1,7 @@
 --[[ GPS location finding tool for an OpenComputers navigation upgrade
      Created for the Youtube channel https://youtube.com/user/nzHook 2018
+     myRail Episode Showing Usage: https://www.youtube.com/watch?v=R2_LfQzrfes
+
      NOTE: Any OpenComputers device using this (I recomend a tablet) will need a Navigation Upgrade
      
     This program is free software: you can redistribute it and/or modify
