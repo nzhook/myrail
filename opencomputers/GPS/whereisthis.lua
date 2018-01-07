@@ -1,6 +1,7 @@
 --[[ GPS location finding tool for an OpenComputers navigation upgrade
      Created for the Youtube channel https://youtube.com/user/nzHook 2018
-     
+     myRail Episode Showing Usage: https://www.youtube.com/watch?v=R2_LfQzrfes
+
      NOTE: This will only work with a Tablet with a navigation upgrade installed and 
      after find00.lua has run
      
