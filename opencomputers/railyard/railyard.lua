@@ -48,29 +48,9 @@ local comms_port = 1234
 -- rcomm is the port we get updates back on -- needs to match rcomms_port on master
 local rcomms_port = 1235
 
-
--- Load previous state
---if filesystem.exists("/home/engine.states") then
---  local f = io.open("/home/engine.states", "r")
---  engines = serialization.unserialize(f:read("*all"))
---  f:close()
---  print("Loaded engines")
---end
-
---         local tmpf = io.open("/home/engine.states", "w")
---          local tmpi = serialization.serialize(engines)
---          tmpf:write(tmpi)
---          tmpf:close()
-
-
 -- TODO: 
 --  - Track where carts are stored
 --  - Save/load positions
---  - Convert master instructions (wood, chest, chest) to position numbers
---  - Release final train
---  - Detect and request train details from master
---  - Detect arriving train to start shunting
---  - Main loop
 
 local modem = component.list("modem")()
 if not modem then error("No modem/network found") end
