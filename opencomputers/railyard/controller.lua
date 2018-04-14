@@ -38,10 +38,12 @@ local rsmax = 14
 ---    hence the requirement for the slot number. 
 --  TODO: Check if the same slot number appears twice and fatal
 local tasks = {}
-tasks["WoodyTreeTransport"] = {slot = 1, required = 0}
-tasks["WaterviewLine"] = {slot = 2, required = 0}
-tasks["CharcoalHillCharcoal"] = {slot = 3, required = 0}
-tasks["XMasLine"] = {slot = 4, required = 0}
+tasks["WoodyTreeTransport"] = {slot = 1, required = 1, carts = "wood wood wood wood"}
+tasks["WaterviewLine"] = {slot = 2, required = 1, carts = "cart cart cart cart"}
+tasks["CharcoalHillCharcoal"] = {slot = 3, required = 2, carts = "chest chest"}
+tasks["XMasLine"] = {slot = 4, required = 1, carts = "chest cart wood chest"}
+
+
 
 -- Redstone colour maps
 colors.release = colors.lightblue                     -- Transposer release
@@ -134,7 +136,7 @@ end
 --  currenttask is the current task being done by the engine (nil to indicate no current task)
 local function find_task(currenttask)
       -- If the engine is fine doing its currenttask then it can keep doing it
-      if currenttask and tasks[currenttask].current <= tasks[currenttask].required then
+      if currenttask and tasks[currenttask] and tasks[currenttask].current <= tasks[currenttask].required then
         print("keeping", currenttask, tasks[currenttask].current, "/", tasks[currenttask].required)
         return currenttask
       end
@@ -156,7 +158,7 @@ local function find_task(currenttask)
       if returntask then
         tasks[returntask].current = tasks[returntask].current + 1
       end
-      if currenttask then
+      if currenttask and tasks[currenttask] then
         tasks[currenttask].current = tasks[currenttask].current - 1
       end
       return returntask
@@ -176,7 +178,7 @@ local function state_check()
     if v.lastseen < ignorebefore then
       print("Havnt seen " .. k .. " for a while, I hope its alright? I'll add another train")
     else
-      if v.task then
+      if v.task and tasks[v.task] then
         tasks[v.task].current = tasks[v.task].current + 1
       end
     end
@@ -189,7 +191,7 @@ local function state_check()
     if tasks[k].current < tasks[k].required then
       print("Releasing a train from the depot to meet demand")
       component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 15)
-      os.sleep(0.2)
+      os.sleep(0.5)
       component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 0)
       -- Recheck earlier if we need more than 1
       if tasks[k].current + 1 < tasks[k].required then
@@ -234,8 +236,8 @@ while runstate > 0 do
     elseif a2 == 114 then   -- r manually releases an engine
       print("Releasing engine from depot")
       component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 15)
---      os.sleep(0.2)
-      component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 0)
+--      os.sleep(0.5)
+--      component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 0)
     else
       print("Unknown keypress ", a2, a3)
     end
@@ -299,9 +301,22 @@ while runstate > 0 do
         currentT = rsmax - a4
       end
     end
-  
+	elseif e == "modem_message" then
+		if a5 == "yardrequirements" then
+			-- yard requirements is the yard asking what should be made. so we send back the requirements
+			local engineid = engine_num(a6, a7)
+			if engines[engineid] and engines[engineid].task and tasks[engines[engineid].task] then
+				print("Yard requested carts for ", engineid, colors[a6], colors[a7])
+				component.modem.send(a2, rcomms_port, "yardbuild", tasks[engines[engineid].task].carts)
+			else
+				-- Somehow an engine with no task arrived, tell the yard there are no carts so it lets it go again
+				print("Yard requested carts for ", engineid, colors[a6], colors[a7], " but no task assigned")
+				component.modem.send(a2, rcomms_port, "yardbuild", "")
+			end
+		else
+			print("UNKNOWN MODEM MESSAGE", a5, a6, a7)
+		end
     -- Do other stuff here
-    
   else
       print("Unknown " .. e, a1, a2, a3, a4, a5, a6, a7)
   end
