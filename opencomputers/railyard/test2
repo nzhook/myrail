@@ -1,0 +1,53 @@
+--[[ Use redstone to detect type of train by colour
+     Created for the Youtube channel https://youtube.com/user/nzHook 2018
+     myRail Episode Showing Usage: https://www.youtube.com/watch?v=02_GhpYRju4
+     
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+]]--
+local event = require("event")
+local sides = require("sides")
+local colors = require("colors")
+
+local rsmax = 14
+
+-- Debugging of the redstone
+colors.rs = {}
+colors.rs[0] = colors.white
+colors.rs[1] = colors.orange
+colors.rs[2] = colors.magenta
+colors.rs[3] = colors.lightblue
+colors.rs[4] = colors.yellow
+
+local function engine_num(currentB, currentT) 
+  return (currentB * 10) + currentT + 1
+end
+
+while true do
+  local e, a1, a2, a3, a4, a5, a6, a7 = event.pull()
+  
+  if e == "redstone_changed" then
+--      print("Redstone", sides[a2], a4)
+      if sides[a2] == "top" and a4 > 0 then
+        print("Its #", engine_num(currentB, currentT), currentB .. " bottom", currentT .. " top")
+        print("Its #", engine_num(currentB, currentT), colors[colors.rs[currentB]] .. " bottom", colors[colors.rs[currentT]] .. " top")
+
+        currentT = -1
+        currentB = -1
+      elseif sides[a2] == "back" and a3 == 0 then
+        currentB = rsmax - a4
+      elseif sides[a2] == "front" and a3 == 0 then
+        currentT = rsmax - a4
+      end
+  else
+      print("Unknown " .. e, a1, a2, a3, a4, a5, a6, a7)
+  end
+end
