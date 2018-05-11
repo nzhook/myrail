@@ -74,10 +74,32 @@ local comms_port = 1234
 -- rcomm is the port we send our comms back (nothing yet)
 local rcomms_port = 1235
 
+
+-- Top animation
+local ssaver = {}
+ssaver[0]   = "                        . . . o o o O O O"
+ssaver[1]   = "                              _____       O"
+
+ssaver[0.5] = "                       . . . o o o O O O O"
+ssaver[1.5] = "                              _____        "
+ssaver[2]   = " ____   ____   ____   __.....  )  |___n__]["
+ssaver[3]   = "/\\__/\\_/\\__/\\_/\\__/\\_[_______]_|__|________)|"
+ssaver[4]   = "`o  o' `o  o' `o  o'  oo   oo  `oo-OOO-' oo\\\\__"
+local screensize = term.getViewport() - 2
+local descsize = screensize - (3 + 3 + 6 + 7)
+
+-- Add the whitespace to the start here, saves us recalculating it on every run
+for i = 0, 4 do
+  ssaver[i] = string.rep(" ", screensize) .. ssaver[i]
+end
+ssaver[0.5] = string.rep(" ", screensize) .. ssaver[0.5]
+ssaver[1.5] = string.rep(" ", screensize) .. ssaver[1.5]
+
+
 -- Internal vars
 local nextstatecheck = 0
 local engines = {}
-local defaultchecktimeout = 10
+local defaultchecktimeout = 0.1
 local checktimeout = defaultchecktimeout
 local runstate = 1
 
@@ -93,18 +115,39 @@ local function print(...)
 --    oldprint(...)
 end
 
+currentssloc = 0
 local function draw_gui()
   local curx, cury = term.getCursor()
   term.setCursor(1, 1)
+	if currentssloc <= 0 then
+		currentssloc = string.len(ssaver[3])
+	end
+	currentssloc = currentssloc - 1
+
+
   term.clearLine()
-  oldprint("==================================")
-  for k, v in pairs(tasks) do
-    term.clearLine()
-    oldprint(k, v.current .. "/" .. v.required)
+  oldprint("")
+
+  for i = 0, 4 do
+    if i <= 1 and currentssloc % 4 <= 2 then
+      oldprint(" " .. string.sub(ssaver[i + 0.5], currentssloc, currentssloc + screensize - 1))
+    else
+      oldprint(" " .. string.sub(ssaver[i], currentssloc, currentssloc + screensize - 1))
+    end
   end
-  term.clearLine()
-  oldprint("==================================")
-  for x = 1, 10 do
+
+
+-- DRAW_GUI
+  oldprint(" ┌" .. string.rep("─", screensize - 2) .. "┐")
+  local lineno = 7
+  for k, v in pairs(tasks) do
+    lineno = lineno + 1
+    oldprint(string.format(" │ %-" .. descsize .. "." .. descsize .. "s %3i/%-3i [-][+] │", k, v.current, v.required))
+    tasks[k].guiline = lineno
+  end
+--  term.clearLine()
+  oldprint(" └" .. string.rep("─", screensize - 2) .. "┘")
+  for x = 1, 5 do
     term.clearLine()
     if log[x] then
       oldprint(table.unpack(log[x]))
@@ -140,6 +183,16 @@ local function find_task(currenttask)
         print("keeping", currenttask, tasks[currenttask].current, "/", tasks[currenttask].required)
         return currenttask
       end
+			if currenttask then
+				-- Code used to just change the destination, but as the train may have a different load we send it back to the depot
+				--   and allow the decoupling code to unload + normal code would release a new train
+				if tasks[currenttask] then
+					tasks[currenttask].current = tasks[currenttask].current - 1
+				end
+				
+				return nil
+			end
+			
       -- Could just detect the first task that is required and return
       --  but if there are not enough engines available something else may suffer
       --  so we find the task with the least amount of engines
@@ -157,9 +210,6 @@ local function find_task(currenttask)
       print("Returning ", returntask)
       if returntask then
         tasks[returntask].current = tasks[returntask].current + 1
-      end
-      if currenttask and tasks[currenttask] then
-        tasks[currenttask].current = tasks[currenttask].current - 1
       end
       return returntask
 end
@@ -191,8 +241,8 @@ local function state_check()
     if tasks[k].current < tasks[k].required then
       print("Releasing a train from the depot to meet demand")
       component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 15)
-      os.sleep(0.5)
-      component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 0)
+--      os.sleep(0.5)
+--      component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 0)
       -- Recheck earlier if we need more than 1
       if tasks[k].current + 1 < tasks[k].required then
         nextstatecheck = computer.uptime() + 2
@@ -215,6 +265,9 @@ if filesystem.exists("/home/engine.states") then
   f:close()
   print("Loaded engines")
 end
+for k, v in pairs(tasks) do
+	tasks[k].guiline = 0
+end
 
 -- Ok, lets get started
 for k, v in pairs(engines) do
@@ -223,6 +276,7 @@ end
 
 state_check()
 nextrain()
+term.clear()
 while runstate > 0 do
   local e, a1, a2, a3, a4, a5, a6, a7 = event.pull(checktimeout)
   
@@ -240,6 +294,21 @@ while runstate > 0 do
 --      component.redstone.setBundledOutput(sides.bottom, colors.depotexit, 0)
     else
       print("Unknown keypress ", a2, a3)
+    end
+  elseif e == "touch" then
+    for k, v in pairs(tasks) do
+      if v.guiline == a3 then
+         if a2 >= descsize + 13 and a2 <= descsize + 13 + 2 then
+             if tasks[k].required > 0 then
+               tasks[k].required = tasks[k].required - 1
+             end
+         end
+         if a2 >= descsize + 16 and a2 <= descsize + 16 + 2 then
+             if tasks[k].required < 256 then      --- 16 top colours * 16 bottom colours = 256
+               tasks[k].required = tasks[k].required + 1
+             end
+         end
+      end
     end
   elseif e == "redstone_changed" then
     if component.isPrimary(a1) then
@@ -260,7 +329,7 @@ while runstate > 0 do
       --   a loco is on its way in so we increase how often we check
       if sides[a2] == "top" and a4 > 0 then
         -- This indicates the train has poast the detector
-        checktimeout = 0.3
+        --checktimeout = 0.3
         if not currentT or not currentB then
           -- We couldnt determine a colour? send it to the depot
           slot_chest = nil
