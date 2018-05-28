@@ -1,6 +1,7 @@
 --[[ Rail yard train maker
+     Author: nzHook
      Created for the Youtube channel https://youtube.com/user/nzHook 2018
-     myRail Episode Showing Usage: Not published yet
+     myRail Episode Showing Usage: https://www.youtube.com/watch?v=Iq13el02ips
      
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
