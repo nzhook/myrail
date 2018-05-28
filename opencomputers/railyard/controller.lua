@@ -1,4 +1,5 @@
 --[[ Engine controller - keeps X number of engines in the system
+     Author: nzHook
      Created for the Youtube channel https://youtube.com/user/nzHook 2018
      myRail Episode Showing Usage: https://www.youtube.com/watch?v=02_GhpYRju4
      
