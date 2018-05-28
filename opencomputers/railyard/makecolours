@@ -1,0 +1,91 @@
+--[[ Make Colours - Crafts coloured steam trains using dyes
+     Created for the Youtube channel https://youtube.com/user/nzHook 2018
+     myRail Episode Showing Usage: https://www.youtube.com/watch?v=Ys4DGK8POE0
+     
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+]]--
+local component = require("component")
+local roboto = require("robot")
+local sides = require("sides")
+
+-- Work how how many Dyes and engines we have
+roboto.turnLeft()
+local nodyes = 0
+-- Sanity check that we are looking at the dye chest
+local tst = component.inventory_controller.getStackInSlot(sides.front, 1)
+if not tst or not (tst.name == "minecraft:dye") then
+	roboto.turnRight()
+	print("The dye chest (to the left) does not seen to have a Dye in slot 1")
+	os.exit()
+end
+-- If we get here slot 1 has a dye, so increment by 1
+nodyes = 1
+
+-- There is getAllStacks but it returns empty slots so you get the same info just without the 'memoryIntensive' overhead
+--  we start at 2 since we have just checked for a dye
+for slotn = 2, component.inventory_controller.getInventorySize(sides.front) do
+	if component.inventory_controller.getSlotMaxStackSize(sides.front, slotn) > 0 then
+		nodyes = nodyes + 1
+	end
+end
+print("Detected " .. nodyes .. " items in dye chest")
+roboto.turnLeft()
+
+-- We only check how many items are in the next chest
+local noengines = 0
+for slotn = 1, component.inventory_controller.getInventorySize(sides.front) do
+	if component.inventory_controller.getSlotMaxStackSize(sides.front, slotn) > 0 then
+		noengines = noengines + 1
+	end
+end
+print("Detected " .. noengines .. " items in engine chest")
+-- Return back to facing front
+roboto.turnLeft()
+roboto.turnLeft()
+
+local slotT = 0 			-- The current Top dye slot
+local slotB = 0 			-- The current Bottom dye slot
+
+for slotB = 1, nodyes do
+	for slotT = 1, nodyes do
+		if noengines < 1 then
+			print("Out of engines")
+			-- TODO: Should we have some smarts here to know what we last created so we continue?
+			os.exit()
+		end
+
+		roboto.turnLeft()
+		roboto.select(2)
+		component.inventory_controller.suckFromSlot(sides.front, slotT, 1)
+		roboto.select(10)
+		component.inventory_controller.suckFromSlot(sides.front, slotB, 1)
+		roboto.turnLeft()
+		roboto.select(6)
+		roboto.suck(1)
+		noengines = noengines - 1
+		roboto.turnLeft()
+		roboto.turnLeft()
+		-- Wait for the section in front to be clear before we use the resources
+		local passable, type
+		while not (type == "passable") do			-- When an egine is here, the first arg is true but the second = entity
+			passable, type = roboto.detect()
+			if not passable then
+				print("There seems to be a block in front of me. I cant place something here?")
+			end
+			os.sleep(1)
+		end
+
+		component.crafting.craft(1)
+		component.robot.place(3)
+	end
+end
+print("Done")
