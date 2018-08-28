@@ -130,7 +130,8 @@ local function domove(noSwingDown)
 					else
 						print("forward failed and same with a swing")
 						message("immovable")
-						os.exit()
+						computer.beep(1000)
+						os.sleep(10)
 					end
 				else
 					-- If the last slot is full, call for an unload and wait
