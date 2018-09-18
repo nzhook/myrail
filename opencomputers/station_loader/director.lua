@@ -1,6 +1,6 @@
 --[[ Drone Train Loader - Director
      Created for the Youtube channel https://youtube.com/user/nzHook 2018
-     myRail Episode Showing Usage: TO BE UPLOADED
+     myRail Episode Showing Usage: https://youtu.be/b_ZOIMPXXtY
      
      NOTE: Requires Drone to be running to scan for waypoints
      
