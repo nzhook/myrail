@@ -25,8 +25,8 @@ local navigation = component.navigation
 --   refuel
 --   return home?
 
-local size = 60 -- best with even numbers
---size = 16     -- This was the small size used in the episode
+local size = 60
+--size = 16
 local segmentheight = 4
 local bottomheight = 10
 local topheight = 64				-- best teired result from 64
@@ -82,6 +82,17 @@ local function newtool()
 			end
 		end
 		if not found then
+			robot.select(1)
+			-- check the eqipment slot in case it dropped there
+			inv.equip()
+			local citem = inv.getStackInInternalSlot(s)
+			if citem ~= nil and citem.name == usingtool.name then
+				found = 1
+			else
+				inv.equip()
+			end
+		end
+		if not found then
 			print("can not find a replacement tool " .. usingtool.name)
 			-- todo should just wait and loop until one appears
 			message("tool")
@@ -94,6 +105,7 @@ local function newtool()
 	end
 	robot.select(found)
 	inv.equip()
+	robot.select(1)
 end
 							
 local function dounload()
@@ -305,4 +317,4 @@ end
 message("unload")
 dounload()
 
--- return  to start here?
+-- todo: return  to start?
