@@ -1,6 +1,6 @@
 --[[ Drone Train Loader - Drone EEPROM (not minified)
      Created for the Youtube channel https://youtube.com/user/nzHook 2018
-     myRail Episode Showing Usage: https://youtu.be/W9s4uPspkE0
+     myRail Episode Showing Usage: https://youtu.be/b_ZOIMPXXtY
 
     NOTE: This code needs to be smaller to fit onto the EEPROM
           Remove comments and excess whitespace
