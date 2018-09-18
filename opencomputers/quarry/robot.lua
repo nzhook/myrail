@@ -25,8 +25,8 @@ local navigation = component.navigation
 --   refuel
 --   return home?
 
-local size = 60
---size = 16
+local size = 60 -- best with even numbers
+--size = 16     -- This was the small size used in the episode
 local segmentheight = 4
 local bottomheight = 10
 local topheight = 64				-- best teired result from 64
