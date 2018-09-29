@@ -34,20 +34,15 @@ local commsport = 3213
 -- The side to write the redstone signals to (cannot be the same as the detector)
 local redstoneside = sides.bottom
 
--- These are the part we cant detect :(
-
--- The ID for the transposer to read items from
--- You can use an analyser to get IDs - Hover over the ID in chat to copy to clipboard
--- @TODO Should assume all connected chests are storage and just ignore Golden Tickets
-local chesttransposer = "31858c1b-df95-467c-97a9-6bb340aacb94"
-local chestside = sides.top
-
+-- This is the part we cant detect :(
 --  The transposer ids and sides for each platform
 --  index is the platform, value is transposerid, side
 --   The side the chests we take the tickets from are always on
 --  @todo We could detect them by moving items into chests above and have a redstone 
 --    for the number of items?
 local ticketside = sides.left
+local chestside = sides.top
+local chesttransposer = "31858c1b-df95-467c-97a9-6bb340aacb94"
 local transposersides = {
   {"7ff55733-5835-46b2-bda7-8474bd168984", sides.back},
   {"7ff55733-5835-46b2-bda7-8474bd168984", sides.front},
@@ -72,8 +67,7 @@ local tasks = {
 		{name = "*", 			slot = 4, weight = 0.3, items = {".*"}},
 }
 
--- Nothing under here needs to be configured
-
+-- code below. Nothing under here needs to be configured
 -- Drone colours, drones are coloured by the number of commands we have sent
 --   (in order words the colour of the drone means nothing but rainbows)
 local drone_colors = {
@@ -213,6 +207,7 @@ local function setupplatforms()
            platforms[e[evtPlatform]] = {
               position = e[evtPlatformPOS],
               currenttask = nil,
+							closed = true,
            }
 					 component.invoke(platformids[e[evtPlatformID]], "setLabel", "Platform " .. e[evtPlatform])
            -- dont need the redstone on now
@@ -303,24 +298,24 @@ while true do
 					-- assign ticket for task to loco in platform col
 					-- TODO instruct each available drone to fill train - currently we let the idle cmd do it
 					platforms[col + 1].currenttask = NEXTTASK
+					platforms[col + 1].closed = false
 				end
 			end
 		end
   elseif e[evtType] == "modem_message" then
-		--	debugmsg(e)
+			debugmsg(e)
     -- drone responding
     if e[evtCMD] == "idle" then
         drones[e[evtRemote]] = nil
         -- scan for another platform that we could help load
         local tested = 0
+				local foundbutempty = false				-- If we need to rescan the items due to a empty set of slots for a task
         while tested < platformcount do
           tested = tested + 1
 					lastplatform = lastplatform - 1			-- easy to read modula on the number of platforms but starting at 1
           lastplatform = ((lastplatform + 1) % platformcount)
 					lastplatform = lastplatform + 1
-          if platforms[lastplatform] and platforms[lastplatform].currenttask then
-            drones[e[evtRemote]] = lastplatform
-						
+          if platforms[lastplatform] and platforms[lastplatform].currenttask and not platforms[lastplatform].closed then
 						local fromslots = ""
 						if items[platforms[lastplatform].currenttask] and items[platforms[lastplatform].currenttask].slots then
 							for i = 1, e[evtInvSize] do
@@ -332,10 +327,11 @@ while true do
 						end
 						-- If no slots were returned, rescan the items
 						if fromslots == "" then
------ @todo RE-ENABLE ME
------								readitems()
+								print("No slots left for this platform")
+								foundbutempty = true
 								-- this drone gets to relax for this platform
 						else
+							drones[e[evtRemote]] = lastplatform
 							print("Drone " .. e[evtRemote] .. " is idle, assign platform " .. lastplatform .. " (task " .. platforms[lastplatform].currenttask .. ")")
 							cmdno = (cmdno + 1) % (#drone_colors-1)
 							modem.send(e[evtRemote], commsport, drone_colors[cmdno + 1], "fill", platforms[lastplatform].position, fromslots)
@@ -345,11 +341,16 @@ while true do
 		--				print("Platform " .. lastplatform .. " is idle")
 					end
         end
+				if not drones[e[evtRemote]] and foundbutempty then
+					print("No tasks available, rescaninning items")
+					readitems()
+				end
     elseif e[evtCMD] == "filled" then  -- train is full
         -- if this is the last drone reporting for the platform
         --   release the train the drone was working on
         local dronesplatform = drones[e[evtRemote]]
 				print("Drone " .. e[evtRemote] .. " reports platform ", dronesplatform, " is complete")
+				platforms[dronesplatform].closed = true
 				if dronesplatform then
 					drones[e[evtRemote]] = nil
 					for k, i in pairs(drones) do
