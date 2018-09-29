@@ -40,6 +40,8 @@ if(not inv) then error("Missing an inventory_controller upgrade") end
 
 -- defines
 local myx,myy,myz  = 0,0,0
+local storagepos
+local chargerpos 
 
 -- Only used for testing. Requires modified net-flash code
 local function print(txt) 
@@ -51,6 +53,7 @@ end
 
 local function split(input)
 	local t={} ; i=1
+	if not input then return t end
 	for str in string.gmatch(input, "([^,]+)") do
 					t[i] = str
 					i = i + 1
@@ -104,8 +107,6 @@ print("My POS " .. myx .. "," .. myy .. ","  .. myz)
 -- We need to find the charger and the storage chest
 --  TODO should the storage be sent in the fill message as currently we could only handle one storage
 local waps = navigation.findWaypoints(gpsscansize)
-local storagepos
-local chargerpos 
 while not storagepos and not chargerpos do
 	for k = 1, waps.n do
 		if waps[k].label == "pickup" then
