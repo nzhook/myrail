@@ -1,7 +1,7 @@
 --[[ Spooky Graveyard hlogram Ghost with redstone output for sounds
      Author: nzHook
      Created for the Youtube channel https://youtube.com/user/nzHook 2020
-     myRail Episode Showing Usage: TO BE FILLED
+     myRail Episode Showing Usage: https://www.youtube.com/watch?v=RUO1KuvugXM
      NOTE: Requires:
        - hologram projectors (tier 2 if below ground level)
           each projector must be placed in the same direction
