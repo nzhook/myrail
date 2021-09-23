@@ -1,7 +1,7 @@
 --[[ Component name system (CNS) - Name Server
      Author: nzHook
      Created for the Youtube channel https://youtube.com/user/nzHook 2019
-     myRail Episode Showing Setup: https://youtu.be/lp_uL_2OQrU (episode 42)
+     myRail Episode Showing Usage: https://youtu.be/lp_uL_2OQrU (episode 42)
      
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,7 +20,8 @@
 --   -- Make a tablet with dns_name installed (see dns_name)
 --   -- With the tablet select the computer running this code
 --   -- Use the tablet to set names
---   -- In code use dns("name you used") to reference a named component
+--   -- Include the cns library in your code
+--   -- Use cns("name you used") to reference a named component
 ---
 local event = require("event")
 local component = require("component")
@@ -28,9 +29,13 @@ local component = require("component")
 -- config
 local ns_port = 53
 
-
 -- initial vars
 local names = {}
+local interactive = io.output().tty
+local gpu
+if interactive then
+  gpu = component.gpu
+end
 
 -- load saved state into memory
 local nsfile = io.open("/.comps", "r")
@@ -57,6 +62,29 @@ end
 
 
 -- functions
+local function log(raddr, cmd, msg1, msgid, ...)
+  local args = table.pack(...)
+  if interactive then gpu.setForeground(0xCC7777) end
+  io.write("[" .. os.date("%T") .. "] ")
+  if interactive then gpu.setForeground(0x44CC00) end
+  io.write(cmd)
+  if msgid then
+    if interactive then gpu.setForeground(0xCC7777) end
+    io.write("[" .. msgid .. "] ")
+  else
+    io.write(" ")
+  end
+  if raddr then
+    if interactive then gpu.setForeground(0xCC7777) end
+    io.write(string.sub(raddr, 1, 3) .. ".." .. string.sub(raddr, 34, 37) .. " ")
+  end
+  if interactive then gpu.setForeground(0x44CC00) end
+  io.write(msg1 .. " ")
+  if interactive then gpu.setForeground(0xFFFFFF) end
+  io.write(table.concat(args, " "))
+  io.write("\n")
+end
+
 -- write the names stored in memory back to disk
 local function savenames()
   local nsfile = io.open("/.comps", "w")
@@ -93,16 +121,17 @@ function cns(address)
 end
 
 -- the communication api for remote devices like the tablet
-local function dns_comms(e, null, raddr, rport, null, proto, cmd, msgid, msg1, msg2, msg3, msg4, msg5, msg6) 
---  print(e, raddr, msg1, proto, cmd, msg1, msg2, msg3, msg4, msg5, msg6)
+local function dns_comms(e, compid, raddr, rport, null, proto, cmd, msgid, msg1, msg2, msg3, msg4, msg5, msg6) 
   if rport ~= ns_port then
     -- not a message for us
     return
   end
+  local modem = component.proxy(compid)
   if proto == "arp" and cmd == "who" then
     -- an arp request is to find the computers network id, we only need to respond if its us
     if msg1 == component.computer.address then
-      component.modem.send(raddr, ns_port, "arppong", msgid, component.computer.address)
+      log(raddr, "ARP", msg1, msgid, "arppong", component.computer.address)
+      modem.send(raddr, ns_port, "arppong", msgid, component.computer.address)
     end
     
     return
@@ -111,9 +140,9 @@ local function dns_comms(e, null, raddr, rport, null, proto, cmd, msgid, msg1, m
     if cmd == "lookup" then
       local returnname = ""
       -- lets see if we can find the address in our local records, we send back the name and address from cns which maybe a set of blank strings (indicating nothing exists)
-      local null, lname, laddress = cns(msg1)
---      print("Query of ", msg1, ", msgid", msgid, "response=", "nsres", msgid, lname, laddress)
-      component.modem.send(raddr, ns_port, "nsres", msgid, lname, laddress)
+      local resp, lname, laddress = cns(msg1)
+      modem.send(raddr, ns_port, "nsres", msgid, lname, laddress, resp)
+      log(raddr, "QUERY", msg1, msgid, lname, laddress, resp)
     elseif cmd == "update" then
       -- save the detail back to memory and to disk
       -- TODO: Should do some validation here just in case
@@ -123,8 +152,8 @@ local function dns_comms(e, null, raddr, rport, null, proto, cmd, msgid, msg1, m
       
       -- Pull what is saved and return that back
       local null, lname, laddress = cns(msg1)
---      print("Update of ", msg1, ", msgid", msgid, "response=", "nsres", msgid, lname, laddress)
-      component.modem.send(raddr, ns_port, "nsres", msgid, lname, laddress)
+      log(raddr, "UPDATE", msg1, msgid, lname, laddress)
+      modem.send(raddr, ns_port, "nsres", msgid, lname, laddress)
     end
     
   end
@@ -132,17 +161,24 @@ local function dns_comms(e, null, raddr, rport, null, proto, cmd, msgid, msg1, m
   -- ignore any unknown commands
 end
 
-component.modem.open(ns_port)
+-- should we loop through all the modems and open the port? Testing seems to indicate this opens on all modems
+for comp, _ in component.list("modem") do
+  if(not component.invoke(comp, "open", ns_port)) then
+    error("Failed to open port " .. tostring(ns_port) .. " on " .. comp)
+  end
+
+  log(nil, "START", "CNS server address=" .. comp .. ":" .. ns_port, nil)
+end
 
 event.listen("modem_message", dns_comms)
 -- event code will now listen in the background, we return back to the OS
 
-
+print("CNS Server loaded in background")
 
 
 -- override the component functions with a custom one that does a lookup before passing to the original
--- TODO Should this really be in here?
 local componentrealget = component.get
+local componentrealproxy = component.proxy
 function component.get(address, componentType)
   checkArg(1, address, "string")
   
@@ -157,7 +193,6 @@ function component.get(address, componentType)
 end
 
 
-local componentrealproxy = component.proxy
 function component.proxy(address)
   checkArg(1, address, "string")
   
@@ -170,5 +205,4 @@ function component.proxy(address)
   
   return componentrealproxy(address)
 end
-
 
