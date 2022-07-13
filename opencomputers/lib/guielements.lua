@@ -26,6 +26,7 @@ local event = require("event")
 local term = require("term")
 local textlib = require("text")
 local component = require("component")
+local keyboard = require("keyboard")
 
 local gpu = component.gpu
 local gui = {}
@@ -621,13 +622,24 @@ function gui.ev_touch(e, id, x, y, keymodifer, user)
 				gpu.setBackground(0x000000)
         
         if bdetail["type"] == "number" then
+          adjvalue = 1
+          -- if cntrl is pressed then we increment/decrement by 10
+          if keyboard.isControlDown() then
+            adjvalue = 10
+            
+            -- and if its ctrl-shift then its 100
+            if keyboard.isShiftDown() then
+              adjvalue = 100
+            end
+          end
+          
           if bdetail["action"] == "dec" then
-            bdetail["value"] = bdetail["value"] - 1
+            bdetail["value"] = bdetail["value"] - adjvalue
           else
             if bdetail["nilok"] and bdetail["min"] and bdetail["value"] < bdetail["min"] then
-              bdetail["value"] = bdetail["min"]
+              bdetail["value"] = bdetail["min"] - 1 + adjvalue
             else
-              bdetail["value"] = bdetail["value"] + 1
+              bdetail["value"] = bdetail["value"] + adjvalue
             end
           end
           
