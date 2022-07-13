@@ -94,9 +94,13 @@ function gui.box(x, y, w, h, title, bordercolor, titlecolor, backgroundcolor, cl
 
   if not w then
     w = guiw - x
+  elseif w < 0 then
+    w = guiw + w
   end
   if not h then
     h = guih - y
+  elseif h < 0 then
+    h = guih + h
   end
   if not x then
     x = math.floor((guiw - w) / 2)
