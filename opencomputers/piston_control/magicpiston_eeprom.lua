@@ -1,6 +1,7 @@
 -- This eeprom uses a sticky piston and a network card
 --  Once turned on it will send a 'boot' signal and will wait
 --  for a open or close signal
+-- See myRail https://www.youtube.com/watch?v=mF17eDP9-i8 for more info
 local COMPORT = 2022			-- port to communicate on
 local TIMEOUT = 300				-- turn back off if no signal in this time
 
